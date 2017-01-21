@@ -19,12 +19,11 @@
 
 /*global define document setInterval clearInterval XMLHttpRequest */
 
-define("cdg", [], function () {
-  "use strict";
+export default ((options = {}) => {
 
   function CDGDecoder(canvasEl, borderEl) {
 
-    var CDG_ENUM = {
+    const CDG_ENUM = {
       VRAM_HEIGHT: 216, // Height of VRAM, in pixels.
       VISIBLE_WIDTH: 288, // Width (or pitch) of visible screen, in pixels.
       VISIBLE_HEIGHT: 192, // Height of visible screen, in pixels.
@@ -44,18 +43,18 @@ define("cdg", [], function () {
       SCROLL_COPY: 0x18 // Update scroll offset, setting color if 0x20 or 0x10.
     };
 
-    var internal_border_div = borderEl; // DIV element behind graphics canvas.
-    var internal_rgba_context = canvasEl.getContext("2d"); // 2D context of canvas element.
-    var internal_rgba_imagedata = internal_rgba_context.createImageData(CDG_ENUM.VISIBLE_WIDTH, CDG_ENUM.VISIBLE_HEIGHT); // 288x192 image data.
-    var internal_palette = new Array(CDG_ENUM.PALETTE_ENTRIES); // Array containing the 16 RGB palette entries.
-    var internal_vram = new Array(CDG_ENUM.NUM_X_FONTS * CDG_ENUM.VRAM_HEIGHT); // Array used for graphics VRAM.
+    const internal_border_div = borderEl; // DIV element behind graphics canvas.
+    const internal_rgba_context = canvasEl.getContext("2d"); // 2D context of canvas element.
+    const internal_rgba_imagedata = internal_rgba_context.createImageData(CDG_ENUM.VISIBLE_WIDTH, CDG_ENUM.VISIBLE_HEIGHT); // 288x192 image data.
+    const internal_palette = new Array(CDG_ENUM.PALETTE_ENTRIES); // Array containing the 16 RGB palette entries.
+    const internal_vram = new Array(CDG_ENUM.NUM_X_FONTS * CDG_ENUM.VRAM_HEIGHT); // Array used for graphics VRAM.
 
-    var internal_border_index = 0x00; // The current border palette index.
-    var internal_current_pack = 0x00; // The current playback position.
+    let internal_border_index = 0x00; // The current border palette index.
+    let internal_current_pack = 0x00; // The current playback position.
 
-    var internal_border_dirty = false; // State variable used to determine if the background DIV needs updated.
-    var internal_screen_dirty = false; // State variable used to determine if a full screen update is needed.
-    var internal_dirty_blocks = new Array(900); // Array used to determine if a given font/block has changed.
+    let internal_border_dirty = false; // State variable used to determine if the background DIV needs updated.
+    let internal_screen_dirty = false; // State variable used to determine if a full screen update is needed.
+    const internal_dirty_blocks = new Array(900); // Array used to determine if a given font/block has changed.
 
     // Reset all the CDG state variables back to initial values.
     function reset_cdg_state() {
@@ -84,15 +83,15 @@ define("cdg", [], function () {
         clear_dirty_blocks();
         internal_rgba_context.putImageData(internal_rgba_imagedata, 0, 0);
       } else {
-        var local_context = internal_rgba_context;
-        var local_rgba_imagedata = internal_rgba_imagedata;
-        var local_dirty = internal_dirty_blocks;
-        var local_fontwidth = CDG_ENUM.FONT_WIDTH;
-        var local_fontheight = CDG_ENUM.FONT_HEIGHT;
-        var blk = 0x00;
-        for (var y_blk = 1; y_blk <= 16; ++y_blk) {
+        const local_context = internal_rgba_context;
+        const local_rgba_imagedata = internal_rgba_imagedata;
+        const local_dirty = internal_dirty_blocks;
+        const local_fontwidth = CDG_ENUM.FONT_WIDTH;
+        const local_fontheight = CDG_ENUM.FONT_HEIGHT;
+        let blk = 0x00;
+        for (let y_blk = 1; y_blk <= 16; ++y_blk) {
           blk = y_blk * CDG_ENUM.NUM_X_FONTS + 1;
-          for (var x_blk = 1; x_blk <= 48; ++x_blk) {
+          for (let x_blk = 1; x_blk <= 48; ++x_blk) {
             if (local_dirty[blk]) {
               render_block_to_rgb(x_blk, y_blk);
               local_context.putImageData(local_rgba_imagedata, 0, 0, (x_blk - 1) * local_fontwidth, (y_blk - 1) * local_fontheight, local_fontwidth, local_fontheight);
@@ -105,14 +104,14 @@ define("cdg", [], function () {
 
     // Decode to pack playback_position, using cdg_file_data.
     function decode_packs(cdg_file_data, playback_position) {
-      for (var curr_pack = internal_current_pack; curr_pack < playback_position; curr_pack++) {
-        var start_offset = curr_pack * 24;
-        var curr_command = cdg_file_data.charCodeAt(start_offset) & 0x3F;
+      for (let curr_pack = internal_current_pack; curr_pack < playback_position; curr_pack++) {
+        const start_offset = curr_pack * 24;
+        const curr_command = cdg_file_data.charCodeAt(start_offset) & 0x3F;
         if (curr_command == CDG_ENUM.TV_GRAPHICS) {
           // Slice the file array down to a single pack array.
-          var this_pack = cdg_file_data.slice(start_offset, start_offset + 24);
+          const this_pack = cdg_file_data.slice(start_offset, start_offset + 24);
           // Pluck out the graphics instruction.
-          var curr_instruction = this_pack.charCodeAt(1) & 0x3F;
+          const curr_instruction = this_pack.charCodeAt(1) & 0x3F;
           // Perform the instruction action.
           switch (curr_instruction) {
             case CDG_ENUM.MEMORY_PRESET:
@@ -144,12 +143,12 @@ define("cdg", [], function () {
 
     // Convenience function to return the string "rgb(r,g,b)" CSS style tuple of a palette index.
     function palette_index_to_rgb_tuple(requested_index) {
-      return "rgb(" + (internal_palette[requested_index] >> 16 & 0xFF) + "," + (internal_palette[requested_index] >> 8 & 0xFF) + "," + (internal_palette[requested_index] >> 0 & 0xFF) + ")";
+      return `rgb(${ internal_palette[requested_index] >> 16 & 0xFF },${ internal_palette[requested_index] >> 8 & 0xFF },${ internal_palette[requested_index] >> 0 & 0xFF })`;
     }
 
     // Convenience function to return a line of special packed palette values.
     function fill_line_with_palette_index(requested_index) {
-      var adjusted_value = requested_index; // Pixel 0
+      let adjusted_value = requested_index; // Pixel 0
       adjusted_value |= requested_index << 4; // Pixel 1
       adjusted_value |= requested_index << 8; // Pixel 2
       adjusted_value |= requested_index << 12; // Pixel 3
@@ -160,44 +159,44 @@ define("cdg", [], function () {
 
     // Reset the state of all font/blocks to clean.
     function clear_dirty_blocks() {
-      for (var blk = 0; blk < 900; blk++) {
+      for (let blk = 0; blk < 900; blk++) {
         internal_dirty_blocks[blk] = 0x00;
       }
     }
 
     // Reset all the palette RGB values to black.
     function clear_palette() {
-      var total_palette_entries = CDG_ENUM.PALETTE_ENTRIES;
-      for (var idx = 0; idx < total_palette_entries; idx++) {
+      const total_palette_entries = CDG_ENUM.PALETTE_ENTRIES;
+      for (let idx = 0; idx < total_palette_entries; idx++) {
         internal_palette[idx] = 0x00;
       }
     }
 
     // Set all the VRAM index values to requested index.
     function clear_vram(color_index) {
-      var local_vram = internal_vram;
-      var total_vram_size = local_vram.length;
-      var packed_line_value = fill_line_with_palette_index(color_index);
-      for (var pxl = 0; pxl < total_vram_size; pxl++) {
+      const local_vram = internal_vram;
+      const total_vram_size = local_vram.length;
+      const packed_line_value = fill_line_with_palette_index(color_index);
+      for (let pxl = 0; pxl < total_vram_size; pxl++) {
         local_vram[pxl] = packed_line_value;
       }
       internal_screen_dirty = true;
     }
 
     function render_screen_to_rgb() {
-      var local_rgba = internal_rgba_imagedata.data;
-      var local_pal = internal_palette;
-      var local_vram = internal_vram;
-      var vis_width = 48;
-      var vis_height = CDG_ENUM.VISIBLE_HEIGHT;
+      const local_rgba = internal_rgba_imagedata.data;
+      const local_pal = internal_palette;
+      const local_vram = internal_vram;
+      const vis_width = 48;
+      const vis_height = CDG_ENUM.VISIBLE_HEIGHT;
 
-      var vram_loc = 601; // Offset into VRAM array.
-      var rgb_loc = 0x00; // Offset into RGBA array.
-      var curr_rgb = 0x00; // RGBA value of current pixel.
-      var curr_line_indices = 0x00; // Packed font row index values.
+      let vram_loc = 601; // Offset into VRAM array.
+      let rgb_loc = 0x00; // Offset into RGBA array.
+      let curr_rgb = 0x00; // RGBA value of current pixel.
+      let curr_line_indices = 0x00; // Packed font row index values.
 
-      for (var y_pxl = 0; y_pxl < vis_height; ++y_pxl) {
-        for (var x_pxl = 0; x_pxl < vis_width; ++x_pxl) {
+      for (let y_pxl = 0; y_pxl < vis_height; ++y_pxl) {
+        for (let x_pxl = 0; x_pxl < vis_width; ++x_pxl) {
           curr_line_indices = local_vram[vram_loc++]; // Get the current line segment indices.
           curr_rgb = local_pal[curr_line_indices >> 0 & 0x0F]; // Get the RGB value for pixel 0.
           local_rgba[rgb_loc++] = curr_rgb >> 16 & 0xFF; // Set red value for pixel 0.
@@ -238,19 +237,19 @@ define("cdg", [], function () {
     }
 
     function render_block_to_rgb(x_start, y_start) {
-      var local_rgba = internal_rgba_imagedata.data;
-      var local_pal = internal_palette;
-      var local_vram = internal_vram;
+      const local_rgba = internal_rgba_imagedata.data;
+      const local_pal = internal_palette;
+      const local_vram = internal_vram;
 
-      var vram_loc = y_start * CDG_ENUM.NUM_X_FONTS * CDG_ENUM.FONT_HEIGHT + x_start; // Offset into VRAM array.
-      var vram_inc = CDG_ENUM.NUM_X_FONTS;
-      var vram_end = vram_loc + CDG_ENUM.NUM_X_FONTS * CDG_ENUM.FONT_HEIGHT; // VRAM location to end.
-      var rgb_loc = (y_start - 1) * CDG_ENUM.FONT_HEIGHT * CDG_ENUM.VISIBLE_WIDTH; // Row start.
+      let vram_loc = y_start * CDG_ENUM.NUM_X_FONTS * CDG_ENUM.FONT_HEIGHT + x_start; // Offset into VRAM array.
+      const vram_inc = CDG_ENUM.NUM_X_FONTS;
+      const vram_end = vram_loc + CDG_ENUM.NUM_X_FONTS * CDG_ENUM.FONT_HEIGHT; // VRAM location to end.
+      let rgb_loc = (y_start - 1) * CDG_ENUM.FONT_HEIGHT * CDG_ENUM.VISIBLE_WIDTH; // Row start.
       rgb_loc += (x_start - 1) * CDG_ENUM.FONT_WIDTH; // Column start
       rgb_loc *= 4; // RGBA, 1 pxl = 4 bytes.
-      var rgb_inc = (CDG_ENUM.VISIBLE_WIDTH - CDG_ENUM.FONT_WIDTH) * 4;
-      var curr_rgb = 0x00; // RGBA value of current pixel.
-      var curr_line_indices = 0x00; // Packed font row index values.
+      const rgb_inc = (CDG_ENUM.VISIBLE_WIDTH - CDG_ENUM.FONT_WIDTH) * 4;
+      let curr_rgb = 0x00; // RGBA value of current pixel.
+      let curr_line_indices = 0x00; // Packed font row index values.
 
       while (vram_loc < vram_end) {
         curr_line_indices = local_vram[vram_loc]; // Get the current line segment indices.
@@ -296,7 +295,7 @@ define("cdg", [], function () {
       // NOTE: The "border" is actually a DIV element, which can be very expensive to change in some browsers.
       // This somewhat bizarre check ensures that the DIV is only touched if the actual RGB color is different,
       // but the border index variable is always set... A similar check is also performed during palette update.
-      var new_border_index = cdg_pack.charCodeAt(4) & 0x3F; // Get the border index from subcode.
+      const new_border_index = cdg_pack.charCodeAt(4) & 0x3F; // Get the border index from subcode.
       // Check if the new border **RGB** color is different from the old one.
       if (internal_palette[new_border_index] != internal_palette[internal_border_index]) {
         internal_border_dirty = true; // Border needs updating.
@@ -309,14 +308,14 @@ define("cdg", [], function () {
     }
 
     function proc_LOAD_CLUT(cdg_pack) {
-      var local_palette = internal_palette;
+      const local_palette = internal_palette;
       // If instruction is 0x1E then 8*0=0, if 0x1F then 8*1=8 for offset.
-      var pal_offset = (cdg_pack.charCodeAt(1) & 0x01) * 8;
+      const pal_offset = (cdg_pack.charCodeAt(1) & 0x01) * 8;
       // Step through the eight color indices, setting the RGB values.
-      for (var pal_inc = 0; pal_inc < 8; pal_inc++) {
-        var temp_idx = pal_inc + pal_offset;
-        var temp_rgb = 0x00000000;
-        var temp_entry = 0x00000000;
+      for (let pal_inc = 0; pal_inc < 8; pal_inc++) {
+        const temp_idx = pal_inc + pal_offset;
+        let temp_rgb = 0x00000000;
+        let temp_entry = 0x00000000;
         // Set red.
         temp_entry = (cdg_pack.charCodeAt(pal_inc * 2 + 4) & 0x3C) >> 2;
         temp_rgb |= temp_entry * 17 << 16;
@@ -338,28 +337,28 @@ define("cdg", [], function () {
     }
 
     function proc_WRITE_FONT(cdg_pack) {
-      var local_vram = internal_vram;
-      var local_dirty = internal_dirty_blocks;
+      const local_vram = internal_vram;
+      const local_dirty = internal_dirty_blocks;
       // Hacky hack to play channels 0 and 1 only... Ideally, there should be a function and user option to get/set.
-      var active_channels = 0x03;
+      const active_channels = 0x03;
       // First, get the channel...
-      var subcode_channel = (cdg_pack.charCodeAt(4) & 0x30) >> 2 | (cdg_pack.charCodeAt(5) & 0x30) >> 4;
-      var xor_var = cdg_pack.charCodeAt(1) & 0x20;
+      const subcode_channel = (cdg_pack.charCodeAt(4) & 0x30) >> 2 | (cdg_pack.charCodeAt(5) & 0x30) >> 4;
+      const xor_var = cdg_pack.charCodeAt(1) & 0x20;
       // Then see if we should display it.
       if (active_channels >> subcode_channel && 0x01) {
-        var x_location = cdg_pack.charCodeAt(7) & 0x3F; // Get horizontal font location.
-        var y_location = cdg_pack.charCodeAt(6) & 0x1F; // Get vertical font location.
+        const x_location = cdg_pack.charCodeAt(7) & 0x3F; // Get horizontal font location.
+        const y_location = cdg_pack.charCodeAt(6) & 0x1F; // Get vertical font location.
 
         // Verify we're not going to overrun the boundaries (i.e. bad data from a scratched disc).
         if (x_location <= 49 && y_location <= 17) {
-          var start_pixel = y_location * 600 + x_location; // Location of first pixel of this font in linear VRAM.
+          const start_pixel = y_location * 600 + x_location; // Location of first pixel of this font in linear VRAM.
           // NOTE: Profiling indicates charCodeAt() uses ~80% of the CPU consumed for this function.
           // Caching these values reduces that to a negligible amount.
-          var current_indexes = [cdg_pack.charCodeAt(4) & 0x0F, cdg_pack.charCodeAt(5) & 0x0F]; // Current colors.
-          var current_row = 0x00; // Subcode byte for current pixel row.
-          var temp_pxl = 0x00; // Decoded and packed 4bit pixel index values of current row.
-          for (var y_inc = 0; y_inc < 12; y_inc++) {
-            var pix_pos = y_inc * 50 + start_pixel; // Location of the first pixel of this row in linear VRAM.
+          const current_indexes = [cdg_pack.charCodeAt(4) & 0x0F, cdg_pack.charCodeAt(5) & 0x0F]; // Current colors.
+          let current_row = 0x00; // Subcode byte for current pixel row.
+          let temp_pxl = 0x00; // Decoded and packed 4bit pixel index values of current row.
+          for (let y_inc = 0; y_inc < 12; y_inc++) {
+            const pix_pos = y_inc * 50 + start_pixel; // Location of the first pixel of this row in linear VRAM.
             current_row = cdg_pack.charCodeAt(y_inc + 8); // Get the subcode byte for the current row.
             temp_pxl = current_indexes[current_row >> 5 & 0x01] << 0;
             temp_pxl |= current_indexes[current_row >> 4 & 0x01] << 4;
@@ -380,9 +379,9 @@ define("cdg", [], function () {
     }
 
     function proc_DO_SCROLL(cdg_pack) {
-      var direction,
-          copy_flag = (cdg_pack.charCodeAt(1) & 0x08) >> 3,
-          color = cdg_pack.charCodeAt(4) & 0x0F; // Color index to use for preset type.
+      let direction; // Color index to use for preset type.
+      const copy_flag = (cdg_pack.charCodeAt(1) & 0x08) >> 3;
+      const color = cdg_pack.charCodeAt(4) & 0x0F;
 
       // Process horizontal commands.
       if (direction = (cdg_pack.charCodeAt(5) & 0x30) >> 4) {
@@ -396,12 +395,12 @@ define("cdg", [], function () {
     }
 
     function proc_VRAM_HSCROLL(direction, copy_flag, color) {
-      var x_src,
-          y_src,
-          y_start,
-          buf = 0,
-          line_color = fill_line_with_palette_index(color),
-          local_vram = internal_vram;
+      let x_src;
+      let y_src;
+      let y_start;
+      let buf = 0;
+      const line_color = fill_line_with_palette_index(color);
+      const local_vram = internal_vram;
       if (direction == 0x02) {
         // Step through the lines one at a time...
         for (y_src = 0; y_src < 50 * 216; y_src += 50) {
@@ -435,12 +434,12 @@ define("cdg", [], function () {
     }
 
     function proc_VRAM_VSCROLL(direction, copy_flag, color) {
-      var dst_idx,
-          src_idx,
-          offscreen_size = CDG_ENUM.NUM_X_FONTS * CDG_ENUM.FONT_HEIGHT,
-          buf = new Array(offscreen_size),
-          line_color = fill_line_with_palette_index(color),
-          local_vram = internal_vram;
+      let dst_idx;
+      let src_idx;
+      const offscreen_size = CDG_ENUM.NUM_X_FONTS * CDG_ENUM.FONT_HEIGHT;
+      const buf = new Array(offscreen_size);
+      const line_color = fill_line_with_palette_index(color);
+      const local_vram = internal_vram;
       if (direction == 0x02) {
         dst_idx = 0; // Buffer destination starts at 0.
         // Copy the top 300x12 pixels into the buffer.
@@ -491,22 +490,23 @@ define("cdg", [], function () {
   }
 
   function CDGPlayer(containerId, initOptions) {
-
-    var defaults = {
+    const defaults = {
       mediaPath: '',
       audioFormat: 'mp3',
       cdgFileExtension: 'cdg'
-    },
-        audioTypes = {
+    };
+
+    const audioTypes = {
       mp3: 'audio/mpeg; codecs="mp3"',
       ogg: 'audio/ogg; codecs="vorbis"'
-    },
-        audioPlayer = null,
-        audioSourceElement = null,
-        cdgIntervalID = null,
-        cdgHttpRequest = null,
-        cdgData = null,
-        cdgDecoder = null;
+    };
+
+    let audioPlayer = null;
+    let audioSourceElement = null;
+    let cdgIntervalID = null;
+    let cdgHttpRequest = null;
+    let cdgData = null;
+    let cdgDecoder = null;
 
     function handleCDGHttpRequest() {
       if (!cdgHttpRequest) {
@@ -523,16 +523,16 @@ define("cdg", [], function () {
 
     function handleAudioError() {
       if (audioPlayer.error) {
-        var error_result = audioPlayer.error.code ? audioPlayer.error.code : audioPlayer.error;
-        throw new Error("The audio control fired an error event. Could be: " + error_result);
+        const error_result = audioPlayer.error.code ? audioPlayer.error.code : audioPlayer.error;
+        throw new Error(`The audio control fired an error event. Could be: ${ error_result }`);
       }
     }
 
     function updatePlayPosition() {
       if (cdgData != null) {
-        var play_position = Math.floor(audioPlayer.currentTime * 300),
-            current_pack = cdgDecoder.get_current_pack(),
-            position_to_play;
+        let play_position = Math.floor(audioPlayer.currentTime * 300);
+        let current_pack = cdgDecoder.get_current_pack();
+        let position_to_play;
         play_position = play_position < 0 ? 0 : play_position;
         // Render from the beginning of the stream if a reverse seek of more than one second occurred.
         if (play_position < current_pack - 300) {
@@ -575,11 +575,11 @@ define("cdg", [], function () {
       if (!trackOptions || Array.isArray(trackOptions) || typeof trackOptions !== 'string' && typeof trackOptions !== 'object') {
         throw new Error('No track information specified, nothing to load!');
       }
-      var audioFilePrefix,
-          cdgFilePrefix,
-          mediaPath = defaults.mediaPath,
-          audioFormat = defaults.audioFormat,
-          cdgFileExtension = defaults.cdgFileExtension;
+      let audioFilePrefix;
+      let cdgFilePrefix;
+      let mediaPath = defaults.mediaPath;
+      let audioFormat = defaults.audioFormat;
+      let cdgFileExtension = defaults.cdgFileExtension;
       if (typeof trackOptions === 'object') {
         if (!trackOptions.audioFilePrefix) {
           throw new Error('No audioFilePrefix property defined, nothing to load!');
@@ -606,30 +606,30 @@ define("cdg", [], function () {
       }
 
       return {
-        audioFilePrefix: audioFilePrefix,
-        cdgFilePrefix: cdgFilePrefix,
-        mediaPath: mediaPath,
-        audioFormat: audioFormat,
-        cdgFileExtension: cdgFileExtension
+        audioFilePrefix,
+        cdgFilePrefix,
+        mediaPath,
+        audioFormat,
+        cdgFileExtension
       };
     }
 
     function loadTrack(trackOptions) {
-      var trackInfo = parseTrackOptions(trackOptions);
+      const trackInfo = parseTrackOptions(trackOptions);
       clearCDGInterval();
       cdgDecoder.reset_cdg_state();
       cdgDecoder.redraw_canvas();
       cdgData = null;
       cdgHttpRequest = new XMLHttpRequest();
       cdgHttpRequest.onreadystatechange = handleCDGHttpRequest;
-      cdgHttpRequest.open("GET", trackInfo.mediaPath + trackInfo.cdgFilePrefix + "." + trackInfo.cdgFileExtension, true);
+      cdgHttpRequest.open("GET", `${ trackInfo.mediaPath + trackInfo.cdgFilePrefix }.${ trackInfo.cdgFileExtension }`, true);
       cdgHttpRequest.setRequestHeader("Content-Type", "text/html");
       cdgHttpRequest.send();
       if (audioSourceElement == null) {
         audioSourceElement = document.createElement("source");
       }
       audioSourceElement.type = audioTypes[trackInfo.audioFormat];
-      audioSourceElement.src = trackInfo.mediaPath + trackInfo.audioFilePrefix + "." + trackInfo.audioFormat;
+      audioSourceElement.src = `${ trackInfo.mediaPath + trackInfo.audioFilePrefix }.${ trackInfo.audioFormat }`;
       audioPlayer.appendChild(audioSourceElement);
       audioPlayer.load();
       return this;
@@ -639,22 +639,22 @@ define("cdg", [], function () {
       if (!containerId) {
         throw new Error("Required initialisation parameter missing.");
       }
-      var containerEl = document.getElementById(containerId),
-          borderEl = document.createElement("div"),
-          canvasEl = document.createElement("canvas");
+      const containerEl = document.getElementById(containerId);
+      const borderEl = document.createElement("div");
+      const canvasEl = document.createElement("canvas");
       audioPlayer = document.createElement("audio");
-      borderEl.id = containerId + "-border";
+      borderEl.id = `${ containerId }-border`;
       borderEl.className = "cdg-border";
-      canvasEl.id = containerId + "-canvas";
+      canvasEl.id = `${ containerId }-canvas`;
       canvasEl.width = "288";
       canvasEl.height = "192";
       canvasEl.className = "cdg-canvas";
-      audioPlayer.id = containerId + "-audio";
+      audioPlayer.id = `${ containerId }-audio`;
       audioPlayer.className = "cdg-audio";
       borderEl.appendChild(canvasEl);
       containerEl.appendChild(borderEl);
       containerEl.appendChild(audioPlayer);
-      audioPlayer.style.width = canvasEl.offsetWidth + "px";
+      audioPlayer.style.width = `${ canvasEl.offsetWidth }px`;
       audioPlayer.controls = !(initOptions && initOptions.showControls == false);
       audioPlayer.autoplay = !(initOptions && initOptions.autoplay == false);
       audioPlayer.addEventListener("error", handleAudioError, true);
@@ -675,7 +675,7 @@ define("cdg", [], function () {
   }
 
   return {
-    init: function (containerId, initOptions) {
+    init(containerId, initOptions) {
       return new CDGPlayer(containerId, initOptions);
     }
   };
